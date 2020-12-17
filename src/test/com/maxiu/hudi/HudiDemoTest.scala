@@ -1,18 +1,15 @@
 package com.maxiu.hudi
 
 import org.apache.hudi.DataSourceReadOptions
+import org.apache.hudi.DataSourceWriteOptions._
+import org.apache.hudi.QuickstartUtils._
+import org.apache.hudi.config.HoodieWriteConfig._
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.SaveMode._
 import org.apache.spark.sql.SparkSession
 import org.junit._
-import org.apache.hudi.QuickstartUtils._
 
 import scala.collection.JavaConversions._
-import org.apache.spark.sql.SaveMode._
-import org.apache.hudi.DataSourceWriteOptions._
-import org.apache.hudi.common.table.HoodieTableMetaClient
-import org.apache.hudi.common.table.timeline.HoodieActiveTimeline
-import org.apache.hudi.config.HoodieWriteConfig._
-import org.apache.hudi.org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeUnit
 
 @Test
 class HudiDemoTest extends Assert {
@@ -37,13 +34,13 @@ class HudiDemoTest extends Assert {
   }
 
   @After
-  def agter(): Unit = {
+  def after(): Unit = {
     spark.close()
   }
 
   @Test
   def insert(): Unit = {
-    val inserts = convertToStringList(dataGen.generateInserts(2))
+    val inserts = convertToStringList(dataGen.generateInserts(10000))
 
     val df = spark.read.json(spark.sparkContext.parallelize(inserts, 2))
     df.write.format("hudi").
@@ -55,8 +52,8 @@ class HudiDemoTest extends Assert {
       option("hoodie.deltastreamer.keygen.timebased.timestamp.type", "EPOCHMILLISECONDS").
       option("hoodie.deltastreamer.keygen.timebased.output.dateformat", "yyyy/MM/dd").
       option(TABLE_NAME, tableName).
-            mode(Append).
-//      mode(Overwrite).
+//            mode(Append).
+      mode(Overwrite).
       save(basePath)
   }
 
@@ -77,8 +74,8 @@ class HudiDemoTest extends Assert {
     //load(basePath) use "/partitionKey=partitionValue" folder structure for Spark auto partition discovery
     tripsSnapshotDF.createOrReplaceTempView("hudi_trips_snapshot")
 
-    spark.sql("select * from  hudi_trips_snapshot where _hoodie_commit_time = 20201216100312").show()
-//        spark.sql("select distinct(_hoodie_commit_time) from  hudi_trips_snapshot order by _hoodie_commit_time desc").show()
+//    spark.sql("select * from  hudi_trips_snapshot ").show()
+        spark.sql("select distinct(_hoodie_partition_path) from  hudi_trips_snapshot ").show()
     //    spark.sql("select count(_hoodie_commit_time) from  hudi_trips_snapshot where _hoodie_commit_time >= 20201208142810 and _hoodie_commit_time <20201208142814").show()
 
   }
